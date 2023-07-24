@@ -15,3 +15,5 @@ Imports:
 	utils,
 	data.table
 LazyData: true
+URL: https://github.com/omtorano/formatRRBS
+BugReports: https://github.com/omtorano/formatRRBS/issues
