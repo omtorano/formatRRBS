@@ -16,7 +16,7 @@ format_moliRRBS <- function(x, meta, coverage = 0.8, window = 1000) {
   for (i in names(x)) {
     x[[i]]<-x[[i]][(x[[i]]$V5 + x[[i]]$V6) >= 10, ]
   }
-  stat_rrbs <- cbind(stat_rrbs,t(as.data.frame(lapply(x,nrow))))
+  stat_rrbs <- cbind(stat_rrbs, t(as.data.frame(lapply(x, nrow))))
 
   # Create unique feature id col
   for(i in 1:length(x)) {
@@ -25,10 +25,10 @@ format_moliRRBS <- function(x, meta, coverage = 0.8, window = 1000) {
   }
 
   # Limit based on percent coverage
-  meta <- meta[rownames(meta) %in% names(x),]
+  meta <- meta[rownames(meta) %in% names(x), ]
   match_features <- x[[1]][, 7]
   for (i in names(x)[-1]) {
-    match_features<-c(match_features,x[[i]][, 7])
+    match_features<-c(match_features, x[[i]][, 7])
   }
   obj <- table(match_features)
 
@@ -82,9 +82,9 @@ format_moliRRBS <- function(x, meta, coverage = 0.8, window = 1000) {
   }
   stat_rrbs <- cbind(stat_rrbs,t(as.data.frame(lapply(sub_x,nrow))))
   colnames(stat_rrbs) <- c("total", "min10ct", "percent_cov", "gene_region")
-  rrbs_merge <- merge(sub_x[[1]][, c(4,7)], sub_x[[2]][, c(4, 7)], by="V7", all=T)
+  rrbs_merge <- merge(sub_x[[1]][, c(4, 7)], sub_x[[2]][, c(4, 7)], by="V7", all = TRUE)
   for (i in names(sub_x)[-c(1:2)]){
-    rrbs_merge<-merge(rrbs_merge,sub_x[[i]][, c(4, 7)], by="V7", all=T)
+    rrbs_merge<-merge(rrbs_merge,sub_x[[i]][, c(4, 7)], by = "V7", all = TRUE)
   }
   rownames(rrbs_merge) <- rrbs_merge$V7
   rrbs_merge <- rrbs_merge[, -1]
