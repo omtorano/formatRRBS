@@ -84,7 +84,7 @@ format_moliRRBS <- function(x, meta, coverage = 0.8, window = 1000) {
   colnames(stat_rrbs) <- c("total", "min10ct", "percent_cov", "gene_region")
   rrbs_merge <- merge(sub_x[[1]][, c(4, 7)], sub_x[[2]][, c(4, 7)], by="V7", all = TRUE)
   for (i in names(sub_x)[-c(1:2)]){
-    rrbs_merge<-merge(rrbs_merge,sub_x[[i]][, c(4, 7)], by = "V7", all = TRUE)
+    rrbs_merge<-merge(rrbs_merge, sub_x[[i]][, c(4, 7)], by = "V7", all = TRUE)
   }
   rownames(rrbs_merge) <- rrbs_merge$V7
   rrbs_merge <- rrbs_merge[, -1]
