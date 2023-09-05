@@ -100,5 +100,5 @@ format_moliRRBS <- function(x, meta, coverage = 0.8, window = 1000) {
 
   # Save output
   saveRDS(rrbs_merge, paste0(ctrl, "_", window, "_", coverage, ".RDS"))
-  utils::write.csv(stat_rrbs, paste0(ctrl, window, "_", coverage, "stats.csv"))
+  utils::write.csv(stat_rrbs, paste0(ctrl, "_", window, "_", coverage, "stats.csv"))
   }
