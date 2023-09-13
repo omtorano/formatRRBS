@@ -4,7 +4,13 @@
 \alias{format_moliRRBS}
 \title{Format percent methylation from RRBS files for multi omic level integration moli}
 \usage{
-format_moliRRBS(x, meta, coverage = 0.8, window = 1000)
+format_moliRRBS(
+  x,
+  meta,
+  coverage = 0.8,
+  window = 1000,
+  value = c("beta", "M", "all")
+)
 }
 \arguments{
 \item{x}{A list of RRBS data frames}
@@ -14,6 +20,8 @@ format_moliRRBS(x, meta, coverage = 0.8, window = 1000)
 \item{coverage}{Percent coverage (0.8 = 80\%)}
 
 \item{window}{Window of interest in bases upstream and downstream of genes}
+
+\item{value}{Return beta (100*(M/(M+U)), gives beta distribution), M-values (log2((M+1)/(U+1)), Gaussian), or all}
 }
 \value{
 A formatted .RDS file for use in moli, and csv of stats about features removed
