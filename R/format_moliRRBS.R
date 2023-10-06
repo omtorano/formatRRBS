@@ -2,13 +2,19 @@
 #'
 #' @param x A list of RRBS data frames
 #' @param meta A metadata file with rownames matching names of x and a TRT column
-#' @param coverage Percent coverage (0.8 = 80%)
+#' @param coverage Coverage (enter as decimal, 0.8 = 80%)
 #' @param window Window of interest in bases upstream and downstream of genes
-#' @param value Return beta (100*(M/(M+U)), gives beta distribution), M-values (log2((M+1)/(U+1)), Gaussian), or all
+#' @param values Return beta (100*(M/(M+U)), gives beta distribution), M-values (log2((M+1)/(U+1)), Gaussian), or all
 #'
 #' @return A formatted .RDS file for use in moli, and csv of stats about features removed
 #' @export
-format_moliRRBS <- function(x, meta, coverage = 0.8, window = 1000, value = c("beta", "M", "all")) {
+format_moliRRBS <- function(x, meta, coverage = 0.8, window = 1000, values = c("beta", "M", "all")) {
+
+  #stop if metadata not provided
+  if(is.null(meta)) stop("No metadata provided")
+
+  #stop if metadata not provided
+  if(is.null(meta$TRT)) stop("No TRT column, fix metadata")
 
   # Collect stats on the features removed with each filter
   stat_rrbs <- t(as.data.frame(lapply(x, nrow)))
@@ -73,7 +79,7 @@ format_moliRRBS <- function(x, meta, coverage = 0.8, window = 1000, value = c("b
       }
     }
   }
-  obj_sub3 <- obj_sub2[!obj_sub2$keep==0, ]
+  obj_sub3 <- obj_sub2[!obj_sub2$keep == 0, ]
   obj_sub3 <- paste(obj_sub3$chrom, obj_sub3$loc)
 
   # Limit to features within window downstream to window upstream of gene
@@ -84,7 +90,7 @@ format_moliRRBS <- function(x, meta, coverage = 0.8, window = 1000, value = c("b
   stat_rrbs <- cbind(stat_rrbs,t(as.data.frame(lapply(sub_x,nrow))))
   colnames(stat_rrbs) <- c("total", "min10ct", "percent_cov", "gene_region")
   # Output options
-  if (value == "beta") {
+  if (values == "beta") {
     rrbs_merge <- merge(sub_x[[1]][, c(4, 7)], sub_x[[2]][, c(4, 7)], by="V7", all = TRUE)
     for (i in names(sub_x)[-c(1:2)]) {
       rrbs_merge <- merge(rrbs_merge, sub_x[[i]][, c(4, 7)], by = "V7", all = TRUE)
@@ -106,7 +112,7 @@ format_moliRRBS <- function(x, meta, coverage = 0.8, window = 1000, value = c("b
     utils::write.csv(stat_rrbs, paste0(ctrl, "_", window, "_", coverage, "stats.csv"))
   }
 
-  if (value == "M") {
+  if (values == "M") {
     for (i in names(sub_x)) {
       sub_x[[i]][, 8] <- log2((sub_x[[i]][, 5] + 1) / (sub_x[[i]][, 6] + 1))
       colnames(sub_x[[i]])[8] <- paste0(colnames(sub_x[[i]])[4], "_Mval")
@@ -131,7 +137,7 @@ format_moliRRBS <- function(x, meta, coverage = 0.8, window = 1000, value = c("b
     saveRDS(rrbs_merge, paste0(ctrl, "_", window, "_", coverage, "_Mval.RDS"))
     utils::write.csv(stat_rrbs, paste0(ctrl, "_", window, "_", coverage, "stats.csv"))
   }
-  if (value == "all") {
+  if (values == "all") {
     for (i in names(sub_x)) {
       sub_x[[i]][, 8] <- log2((sub_x[[i]][, 5] + 1) / (sub_x[[i]][, 6] + 1))
       colnames(sub_x[[i]])[8] <- paste0(colnames(sub_x[[i]])[4], "_Mval")
@@ -145,12 +151,12 @@ format_moliRRBS <- function(x, meta, coverage = 0.8, window = 1000, value = c("b
 
     # Double check
     for (i in trts) {
-      print(i)
-      print(1 - max(rowSums(is.na(rrbs_merge[, grep(i,colnames(rrbs_merge))]))) / ncol(rrbs_merge[, grep(i,colnames(rrbs_merge))]))
+      paste0(i," "
+            (1 - max(rowSums(is.na(rrbs_merge[, grep(i,colnames(rrbs_merge))]))) / ncol(rrbs_merge[, grep(i,colnames(rrbs_merge))]))*100,
+             "%"," missing")
     }
-    print(paste((ncol(rrbs_merge) - max(rowSums(is.na(rrbs_merge)))) / nrow(meta),
-                "missing values across all samples,", coverage, "specified"), sep = " "
-    )
+    print(paste0((((ncol(rrbs_merge) - max(rowSums(is.na(rrbs_merge)))) / nrow(meta)) / 2)*100,
+                "%"," missing values across all samples,", coverage*100, "%", " specified"))
     # Save output
     saveRDS(rrbs_merge[, grep("Mval", colnames(rrbs_merge))], paste0(ctrl, "_", window, "_", coverage, "_Mval.RDS"))
     saveRDS(rrbs_merge[, grep("Mval", invert = TRUE, colnames(rrbs_merge))], paste0(ctrl, "_", window, "_", coverage, "_beta.RDS"))
