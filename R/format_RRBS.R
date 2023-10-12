@@ -1,14 +1,15 @@
-#' Format percent methylation from RRBS files for multi omic level integration moli
+#' Format percent methylation from RRBS files for multi-omic integration
 #'
 #' @param x A list of RRBS data frames
 #' @param meta A metadata file with rownames matching names of x and a TRT column
+#' @param total_count Minimum counts (methylated + unmethylated) at each feature, default = 10
 #' @param coverage Coverage (enter as decimal, 0.8 = 80%)
-#' @param window Window of interest in bases upstream and downstream of genes
+#' @param window Window of interest in bases upstream and downstream of genes, requires upstream and downstream value, default 1000, 1000
 #' @param values Return beta (100*(M/(M+U)), gives beta distribution), M-values (log2((M+1)/(U+1)), Gaussian), or all
 #'
 #' @return A formatted .RDS file for use in moli, and csv of stats about features removed
 #' @export
-format_moliRRBS <- function(x, meta, coverage = 0.8, window = 1000, values = c("beta", "M", "all")) {
+format_moliRRBS <- function(x, meta, total_count = 10, coverage = 0.8, window = c(1000, 1000), values = c("beta", "M", "all")) {
 
   #stop if metadata not provided
   if(is.null(meta)) stop("No metadata provided")
@@ -19,9 +20,9 @@ format_moliRRBS <- function(x, meta, coverage = 0.8, window = 1000, values = c("
   # Collect stats on the features removed with each filter
   stat_rrbs <- t(as.data.frame(lapply(x, nrow)))
 
-  # Remove features with <10 counts
+  # Remove features with < specified total counts
   for (i in names(x)) {
-    x[[i]]<-x[[i]][(x[[i]]$V5 + x[[i]]$V6) >= 10, ]
+    x[[i]]<-x[[i]][(x[[i]]$V5 + x[[i]]$V6) >= total_count, ]
   }
   stat_rrbs <- cbind(stat_rrbs, t(as.data.frame(lapply(x, nrow))))
 
@@ -58,7 +59,11 @@ format_moliRRBS <- function(x, meta, coverage = 0.8, window = 1000, values = c("
   }
   stat_rrbs <- cbind(stat_rrbs, t(as.data.frame(lapply(sub_x, nrow))))
 
-  # Find chromosomes that are 1k upstream and downstream
+  # Remove features that are all un/methylated across all samples
+
+  obj_sub <-
+
+  # Find chromosomes that are in specified upstream and downstream window
   obj_sub1 <- tidyr::separate(data = as.data.frame(obj_sub),
                               as.data.frame(obj_sub)[, 1], " ",
                               into = c("chrom", "loc")
@@ -73,7 +78,7 @@ format_moliRRBS <- function(x, meta, coverage = 0.8, window = 1000, values = c("
     a <- gtf_gene[gtf_gene$V1 %in% i, ]
     b <- obj_sub2[obj_sub2$chrom == i, ]
     for (j in 1:length(a[, 1])) {
-      k <- b$loc[as.numeric(b$loc) >= a[j, 4] - window & as.numeric(b$loc) <= a[j, 5] + window]
+      k <- b$loc[as.numeric(b$loc) >= a[j, 4] - window[2] & as.numeric(b$loc) <= a[j, 5] + window[1]]
       if(length(c) > 0) {
         obj_sub2[obj_sub2$chrom == i & obj_sub2$loc %in% k, 3] <- gtf_gene$V9[j]
       }
