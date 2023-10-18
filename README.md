@@ -27,7 +27,8 @@ The imported bismark files will be saved to the global environment as a list cal
 
 The columns in each data frame are as follows: 1) chromosome/scaffold, 2) start of methylation location, 3) end of methylation location, 4) percent methylation, 4) methylated C's, and 5) unmethylated C's. For information about the generation of bismark.cov.gz files see the bismark users guide https://www.bioinformatics.babraham.ac.uk/projects/bismark/Bismark_User_Guide.pdf. 
 
-image
+<img width="277" alt="ex_bismark" src="https://github.com/omtorano/formatRRBS/assets/48129653/61e7409f-b8db-4285-9664-353d7f040d67">
+
 # Format
 format_RRBS() has five parameter inputs
 - x: List of data frames containing bismark.cov.gz file information, generated during import_RRBS()
