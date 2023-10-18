@@ -4,18 +4,23 @@
 #' @param meta A metadata file with rownames matching names of x and a TRT column
 #' @param total_count Minimum counts (methylated + unmethylated) at each feature, default = 10
 #' @param coverage Coverage (enter as decimal, 0.8 = 80%)
-#' @param window Window of interest in bases upstream and downstream of genes, requires upstream and downstream value, default 1000, 1000
-#' @param values Return beta (100*(M/(M+U)), gives beta distribution), M-values (log2((M+1)/(U+1)), Gaussian), or all
+#' @param window Window of interest in bases upstream and downstream of genes, requires upstream and downstream value, default = 1000, 1000
 #'
-#' @return A formatted .RDS file for use in moli, and csv of stats about features removed
+#' @return Two formatted .RDS files of beta (100*(M/(M+U)) gives beta distribution) and M-values (log2((M+1)/(U+1)), Gaussian) for use in downstream analysis, and csv of stats about features removed.
 #' @export
-format_moliRRBS <- function(x, meta, total_count = 10, coverage = 0.8, window = c(1000, 1000), values = c("beta", "M", "all")) {
+format_RRBS <- function(x, meta, total_count = 10, coverage = 0.8, window = c(1000, 1000)) {
+
+  #stop if data are not provided
+  if(is.null(x)) stop("No data provided")
 
   #stop if metadata not provided
   if(is.null(meta)) stop("No metadata provided")
 
   #stop if metadata not provided
   if(is.null(meta$TRT)) stop("No TRT column, fix metadata")
+
+  #stop if metadata rownames =/= data names
+  #if(rownames(meta) != names(x)) stop("No TRT column, fix metadata")
 
   # Collect stats on the features removed with each filter
   stat_rrbs <- t(as.data.frame(lapply(x, nrow)))
@@ -28,146 +33,105 @@ format_moliRRBS <- function(x, meta, total_count = 10, coverage = 0.8, window = 
 
   # Create unique feature id col
   for(i in 1:length(x)) {
-    x[[i]][, 7] <- paste(x[[i]][, 1], x[[i]][, 2])
+    x[[i]][, 7] <- paste(x[[i]][, 1], x[[i]][, 2], sep = "-")
     colnames(x[[i]])[4] <- names(x)[i]
   }
 
   # Limit based on percent coverage
   meta <- meta[rownames(meta) %in% names(x), ]
-  match_features <- x[[1]][, 7]
-  for (i in names(x)[-1]) {
-    match_features<-c(match_features, x[[i]][, 7])
-  }
-  obj <- table(match_features)
+  obj <- table(unlist(lapply(x, function(i) i[, 'V7', drop = FALSE])))
 
   # Need to have at least %coverage*total samples, rounded up to be conservative
   obj_sub <- names(obj[obj >= ceiling(coverage * nrow(meta))])
   # Now need to check the distribution of features within groups
   for(j in unique(meta$TRT)) {
-    test_list<-vector()
-    for ( i in names(x[names(x) %in% meta[meta$TRT == j, 1]])) {
-      test_list<-append(test_list,x[[i]]$"V7"[x[[i]]$"V7" %in% obj_sub])
+    test_list <- vector()
+    for ( i in names(x[names(x) %in% rownames(meta[meta$TRT == j, ])])) {
+      test_list <- append(test_list,x[[i]]$"V7"[x[[i]]$"V7" %in% obj_sub])
     }
     t_tl <- table(test_list)
-    obj_sub <- names(t_tl[t_tl >= ceiling(length(meta[meta$TRT == j, 1]) * coverage)])
+    obj_sub <- names(t_tl[t_tl >= ceiling(length(rownames(meta[meta$TRT == j, ])) * coverage)])
   }
 
-  # Limit features to those with %coverage
+  # Limit features to those with % coverage
   sub_x <- list()
   for(i in names(x)) {
-    sub_x[[i]]<-x[[i]][x[[i]][, 7] %in% obj_sub,]
+    sub_x[[i]] <- x[[i]][x[[i]][, 7] %in% obj_sub, ]
   }
+
   stat_rrbs <- cbind(stat_rrbs, t(as.data.frame(lapply(sub_x, nrow))))
-
-  # Remove features that are all un/methylated across all samples
-
-  obj_sub <-
 
   # Find chromosomes that are in specified upstream and downstream window
   obj_sub1 <- tidyr::separate(data = as.data.frame(obj_sub),
-                              as.data.frame(obj_sub)[, 1], " ",
+                              as.data.frame(obj_sub)[, 1], "-",
                               into = c("chrom", "loc")
                               )
 
   # Need to search within specific chrom, numbers are not unique
-  # The below loop might not label the chromosome correctly, chrom will be
-  # relabeled as downstream chrom if chromosomes are less than window bp apart.
   obj_sub2 <- obj_sub1[gtf_gene$V1 %in% obj_sub1$chrom, ]
-  obj_sub2$keep <- rep(0, length(obj_sub2$chrom))
+  obj_sub2$gene <- rep("NA", length(obj_sub2$chrom))
+  obj_sub2$chrom_start <- rep("NA", length(obj_sub2$chrom))
+  obj_sub2$chrom_end <- rep("NA", length(obj_sub2$chrom))
   for (i in unique(obj_sub2$chrom)) {
-    a <- gtf_gene[gtf_gene$V1 %in% i, ]
-    b <- obj_sub2[obj_sub2$chrom == i, ]
-    for (j in 1:length(a[, 1])) {
-      k <- b$loc[as.numeric(b$loc) >= a[j, 4] - window[2] & as.numeric(b$loc) <= a[j, 5] + window[1]]
-      if(length(c) > 0) {
-        obj_sub2[obj_sub2$chrom == i & obj_sub2$loc %in% k, 3] <- gtf_gene$V9[j]
-      }
-    }
+    v1 <- as.numeric(obj_sub2[obj_sub2$chrom %in% i, 2]) # numeric feature location from RRBS unique features
+    dlist <- lapply(v1, function(x) which(data.table::between(x, gtf_gene[gtf_gene$V1 %in% i, 4] - window[1], gtf_gene[gtf_gene$V1 %in% i, 5] + window[2])))
+    obj_sub2[obj_sub2$chrom %in% i , ][rep(seq(length(dlist)), lengths(dlist)), 3] <- gtf_gene[gtf_gene$V1 %in% i, ][unlist(dlist), 9]
+    obj_sub2[obj_sub2$chrom %in% i , ][rep(seq(length(dlist)), lengths(dlist)), 4] <- gtf_gene[gtf_gene$V1 %in% i, ][unlist(dlist), 4]
+    obj_sub2[obj_sub2$chrom %in% i , ][rep(seq(length(dlist)), lengths(dlist)), 5] <- gtf_gene[gtf_gene$V1 %in% i, ][unlist(dlist), 5]
   }
-  obj_sub3 <- obj_sub2[!obj_sub2$keep == 0, ]
-  obj_sub3 <- paste(obj_sub3$chrom, obj_sub3$loc)
+
+  utils::write.csv(obj_sub2, paste0(ctrl, "_", window[1], "-", window[2], "_", coverage, "_", "Unique_Features_to_Genes.csv"))
+  obj_sub3 <- obj_sub2[!obj_sub2$gene == "NA", ]
+  rownames(obj_sub3) <- paste(obj_sub3$chrom, obj_sub3$loc, sep = "-")
 
   # Limit to features within window downstream to window upstream of gene
   sub_x <- list()
   for (i in names(x)) {
-    sub_x[[i]] <- x[[i]][x[[i]][, 7] %in% obj_sub3, ]
+    sub_x[[i]] <- x[[i]][x[[i]][, 7] %in% rownames(obj_sub3), ]
   }
-  stat_rrbs <- cbind(stat_rrbs,t(as.data.frame(lapply(sub_x,nrow))))
-  colnames(stat_rrbs) <- c("total", "min10ct", "percent_cov", "gene_region")
-  # Output options
-  if (values == "beta") {
-    rrbs_merge <- merge(sub_x[[1]][, c(4, 7)], sub_x[[2]][, c(4, 7)], by="V7", all = TRUE)
-    for (i in names(sub_x)[-c(1:2)]) {
-      rrbs_merge <- merge(rrbs_merge, sub_x[[i]][, c(4, 7)], by = "V7", all = TRUE)
-    }
-    rownames(rrbs_merge) <- rrbs_merge$V7
-    rrbs_merge <- rrbs_merge[, -1]
+  stat_rrbs <- cbind(stat_rrbs, t(as.data.frame(lapply(sub_x, nrow))))
 
-    # Double check
-    for (i in trts) {
-      print(i)
-      print(1 - max(rowSums(is.na(rrbs_merge[, grep(i,colnames(rrbs_merge))]))) / ncol(rrbs_merge[, grep(i,colnames(rrbs_merge))]))
-    }
-    print(paste((ncol(rrbs_merge) - max(rowSums(is.na(rrbs_merge)))) / nrow(meta),
-                "missing values across all samples,", coverage, "specified"), sep = " "
-          )
-
-    # Save output
-    saveRDS(rrbs_merge, paste0(ctrl, "_", window, "_", coverage, "_beta.RDS"))
-    utils::write.csv(stat_rrbs, paste0(ctrl, "_", window, "_", coverage, "stats.csv"))
+  # Merge and limit to variable features
+  rrbs_merge <- dplyr::full_join(sub_x[[1]][, c(4, 7)], sub_x[[2]][, c(4, 7)], by = "V7", keep = FALSE)
+  for (i in names(sub_x)[-c(1:2)]) {
+    rrbs_merge <- dplyr::full_join(rrbs_merge, sub_x[[i]][, c(4, 7)], by = "V7", keep = FALSE)
   }
+  rownames(rrbs_merge) <- rrbs_merge$V7
+  rrbs_merge <- rrbs_merge[, -2]
 
-  if (values == "M") {
-    for (i in names(sub_x)) {
-      sub_x[[i]][, 8] <- log2((sub_x[[i]][, 5] + 1) / (sub_x[[i]][, 6] + 1))
-      colnames(sub_x[[i]])[8] <- paste0(colnames(sub_x[[i]])[4], "_Mval")
-    }
-    rrbs_merge <- merge(sub_x[[1]][, c(8, 7)], sub_x[[2]][, c(8, 7)], by="V7", all = TRUE)
-    for (i in names(sub_x)[-c(1:2)]) {
-      rrbs_merge <- merge(rrbs_merge, sub_x[[i]][, c(8, 7)], by = "V7", all = TRUE)
-    }
-    rownames(rrbs_merge) <- rrbs_merge$V7
-    rrbs_merge <- rrbs_merge[, -1]
+  rrbs_merge <- rrbs_merge[!rowSums(rrbs_merge, na.rm = TRUE) == 0, ]
+  rrbs_merge <- rrbs_merge[!matrixStats::rowRanges(as.matrix(rrbs_merge), na.rm = TRUE)[, 1] == 100, ]
 
-    # Double check
-    for (i in trts) {
-      print(i)
-      print(1 - max(rowSums(is.na(rrbs_merge[, grep(i,colnames(rrbs_merge))]))) / ncol(rrbs_merge[, grep(i,colnames(rrbs_merge))]))
-    }
-    print(paste((ncol(rrbs_merge) - max(rowSums(is.na(rrbs_merge)))) / nrow(meta),
-                "missing values across all samples,", coverage, "specified"), sep = " "
-    )
+  stat_rrbs <- cbind(stat_rrbs, t(nrow(rrbs_merge) - as.data.frame(lapply(rrbs_merge, function(y) sum(length(which(is.na(y))))))))
+  colnames(stat_rrbs) <- c("total", "min10ct", "percent_cov", "gene_region", "variable_counts")
 
-    # Save output
-    saveRDS(rrbs_merge, paste0(ctrl, "_", window, "_", coverage, "_Mval.RDS"))
-    utils::write.csv(stat_rrbs, paste0(ctrl, "_", window, "_", coverage, "stats.csv"))
+  # Double check
+  for (i in trts) {
+    print(i)
+    print(1 - max(rowSums(is.na(rrbs_merge[, grep(i,colnames(rrbs_merge))]))) / ncol(rrbs_merge[, grep(i,colnames(rrbs_merge))]))
   }
-  if (values == "all") {
-    for (i in names(sub_x)) {
-      sub_x[[i]][, 8] <- log2((sub_x[[i]][, 5] + 1) / (sub_x[[i]][, 6] + 1))
-      colnames(sub_x[[i]])[8] <- paste0(colnames(sub_x[[i]])[4], "_Mval")
-    }
-    rrbs_merge <- merge(sub_x[[1]][, c(4, 8, 7)], sub_x[[2]][, c(4, 8, 7)], by="V7", all = TRUE)
-    for (i in names(sub_x)[-c(1:2)]) {
-      rrbs_merge <- merge(rrbs_merge, sub_x[[i]][, c(4, 8, 7)], by = "V7", all = TRUE)
-    }
-    rownames(rrbs_merge) <- rrbs_merge$V7
-    rrbs_merge <- rrbs_merge[, -1]
+  print(paste((ncol(rrbs_merge) - max(rowSums(is.na(rrbs_merge)))) / nrow(meta),
+              "missing values across all samples,", coverage, "specified"), sep = " ")
 
-    # Double check
-    for (i in trts) {
-      paste0(i," "
-            (1 - max(rowSums(is.na(rrbs_merge[, grep(i,colnames(rrbs_merge))]))) / ncol(rrbs_merge[, grep(i,colnames(rrbs_merge))]))*100,
-             "%"," missing")
-    }
-    print(paste0((((ncol(rrbs_merge) - max(rowSums(is.na(rrbs_merge)))) / nrow(meta)) / 2)*100,
-                "%"," missing values across all samples,", coverage*100, "%", " specified"))
-    # Save output
-    saveRDS(rrbs_merge[, grep("Mval", colnames(rrbs_merge))], paste0(ctrl, "_", window, "_", coverage, "_Mval.RDS"))
-    saveRDS(rrbs_merge[, grep("Mval", invert = TRUE, colnames(rrbs_merge))], paste0(ctrl, "_", window, "_", coverage, "_beta.RDS"))
-    utils::write.csv(stat_rrbs, paste0(ctrl, "_", window, "_", coverage, "stats.csv"))
+  # Save beta output
+  saveRDS(rrbs_merge, paste0(ctrl, "_", window[1], "-", window[2], "_", coverage, "_beta.RDS"))
+  utils::write.csv(stat_rrbs, paste0(ctrl, "_", window[1], "-", window[2], "_", coverage, "stats.csv"))
+
+  # Calculate and save M-values
+  for (i in names(sub_x)) {
+    sub_x[[i]][, 8] <- log2((sub_x[[i]][, 5] + 1) / (sub_x[[i]][, 6] + 1))
+    colnames(sub_x[[i]])[8] <- paste0(colnames(sub_x[[i]])[4], "_Mval")
   }
+  rrbs_merge_M <- dplyr::full_join(sub_x[[1]][, c(8, 7)], sub_x[[2]][, c(8, 7)], by = "V7", keep = FALSE)
+  for (i in names(sub_x)[-c(1:2)]) {
+    rrbs_merge_M <- dplyr::full_join(rrbs_merge_M, sub_x[[i]][, c(8, 7)], by = "V7", keep = FALSE)
+  }
+  rownames(rrbs_merge_M) <- rrbs_merge_M$V7
+  rrbs_merge_M <- rrbs_merge_M[, -2]
+  rrbs_merge_M <- rrbs_merge_M[rownames(rrbs_merge), ]
 
+  # Save output
+  saveRDS(rrbs_merge_M, paste0(ctrl, "_", window[1], "-", window[2], "_", coverage, "_Mval.RDS"))
 
 
   }

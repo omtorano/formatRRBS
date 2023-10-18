@@ -3,7 +3,7 @@ Title: Format percent methylation from RRBS files
 Version: 0.0.0.9000
 Authors@R: 
     person("Olivia", "Torano", , "torano.olivia@epa.gov", role = c("aut", "cre"))
-Description: Format percent methylation from RRBS files for multi omic level integration moli.
+Description: Format percent methylation from RRBS files for multi omic level integration.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -13,7 +13,9 @@ Depends:
 Imports:
 	tidyr, 
 	utils,
-	data.table
+	data.table,
+	dplyr,
+	matrixStats
 LazyData: true
 URL: https://github.com/omtorano/formatRRBS
 BugReports: https://github.com/omtorano/formatRRBS/issues
