@@ -14,11 +14,11 @@ import_RRBS("ML-0", c("FL-0","ML-10"), dir = "RRBS/methylation_coverage")
 ```
 Where RRBS/methylation_coverage contains the following files:
 
-FL-0-1_bismark_bt2.bismark.cov.gz
-FL-0-2_bismark_bt2.bismark.cov.gz
-ML-0-1_bismark_bt2.bismark.cov.gz
-ML-0-2_bismark_bt2.bismark.cov.gz
-ML-10-1_bismark_bt2.bismark.cov.gz
+FL-0-1_bismark_bt2.bismark.cov.gz  
+FL-0-2_bismark_bt2.bismark.cov.gz  
+ML-0-1_bismark_bt2.bismark.cov.gz  
+ML-0-2_bismark_bt2.bismark.cov.gz  
+ML-10-1_bismark_bt2.bismark.cov.gz  
 ML-10-2_bismark_bt2.bismark.cov.gz
 
 The directory parameter dir will default to the current working directory. The characters denoting control and treatment groups must be unique up to the character(s) denoting replicate. In this example n=2 for control and each treatment groups. The characters "FL-F"are sufficient to classify files 1 & 2 as control, "ML-0" classify files 2 & 3 as treatment 1, and "ML-10" classify files 4 & 5 as treatment 2. Note in this example including the proceeding "-" e.g. "FL-F-" would also correctly classify the samples, but it is not necessary and omission makes for cleaner file names in the final output. The entries for ctrl and trts parameters are saved in the global environment upon running import_RRBS() and are required for format_RRBS(). 
