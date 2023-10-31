@@ -57,13 +57,7 @@ The features present in each sample varies greatly. Since we are interested in c
 
 ## Notes on window
 The window of interest is defined as base pairs upstream and downstream of a gene window. Setting the window of interest to 0,0 would therefore limit features to those only falling within genes. There is currently no functionality that allows the exclusion of the gene window. Gene annotations are stored internally (see data-raw/DATASET.R) and are parsed from GCF_016745375.1_EPA_FHM_2.0_genomic.gtf.gz
-<<<<<<< HEAD
-=======
 
-## Notes on values
-Beta values. M-values are unbounded values and are. 
-
->>>>>>> d40ea52fa7e7ca4f2d33292fb10c1e90c7f693e2
 ## Function output
 Running format_RRBS() will result in four files saved to the current working directory of the R session. The concatenated RRBS data will be stored in a .RDS file, the contents of this file are a data frame with rows corresponding to features (chromosome-loci) and columns corresponding to sample. The values of the data frame will be either beta or M-values as noted in the file name. Beta values represent "percent methylation" at a given methylation loci and are calculated with the following equation: (100*(M/(M+U)). These values follow a beta distribution. M-values: (log2((M+1)/(U+1)) are unbounded and follow a Gaussian distribution. Using these values for downstream applications including differential methylation and multi-omics integration is recommended. 
 The third output is a stats.csv file containing information from each filtering step, specifically the number of features in each raw bismark.cov.gz file, features remaining after total_count filtering, features remaining after % coverage filtering, features remaining after window filtering, and features remaining after filtering non-variable methylation loci (features with the same methylation state across all samples). If the number of features is zero after percent_coverage filteration choosing a less stringent percent coverage is recommended.
