@@ -10,7 +10,7 @@ import_RRBS() has three parameter inputs
 
 Example usage
 ```
-import_RRBS("FL-0", c("ML-0","ML-10"), dir = "RRBS/methylation_coverage")
+import_RRBS("ML-0", c("FL-0","ML-10"), dir = "RRBS/methylation_coverage")
 ```
 Where RRBS/methylation_coverage contains the following files:
 
