@@ -11,13 +11,13 @@
 format_RRBS <- function(x, meta, total_count = 10, coverage = 0.8, window = c(1000, 1000)) {
 
   #stop if data are not provided
-  if(is.null(x)) stop("No data provided")
+  if (is.null(x)) stop("No data provided")
 
   #stop if metadata not provided
-  if(is.null(meta)) stop("No metadata provided")
+  if (is.null(meta)) stop("No metadata provided")
 
   #stop if metadata not provided
-  if(is.null(meta$TRT)) stop("No TRT column, fix metadata")
+  if (is.null(meta$TRT)) stop("No TRT column, fix metadata")
 
   #stop if metadata rownames =/= data names
   #if(rownames(meta) != names(x)) stop("No TRT column, fix metadata")
@@ -32,7 +32,7 @@ format_RRBS <- function(x, meta, total_count = 10, coverage = 0.8, window = c(10
   stat_rrbs <- cbind(stat_rrbs, t(as.data.frame(lapply(x, nrow))))
 
   # Create unique feature id col
-  for(i in 1:length(x)) {
+  for (i in 1:length(x)) {
     x[[i]][, 7] <- paste(x[[i]][, 1], x[[i]][, 2], sep = "-")
     colnames(x[[i]])[4] <- names(x)[i]
   }
@@ -44,9 +44,9 @@ format_RRBS <- function(x, meta, total_count = 10, coverage = 0.8, window = c(10
   # Need to have at least %coverage*total samples, rounded up to be conservative
   obj_sub <- names(obj[obj >= ceiling(coverage * nrow(meta))])
   # Now need to check the distribution of features within groups
-  for(j in unique(meta$TRT)) {
+  for (j in unique(meta$TRT)) {
     test_list <- vector()
-    for ( i in names(x[names(x) %in% rownames(meta[meta$TRT == j, ])])) {
+    for (i in names(x[names(x) %in% rownames(meta[meta$TRT == j, ])])) {
       test_list <- append(test_list,x[[i]]$"V7"[x[[i]]$"V7" %in% obj_sub])
     }
     t_tl <- table(test_list)
@@ -55,7 +55,7 @@ format_RRBS <- function(x, meta, total_count = 10, coverage = 0.8, window = c(10
 
   # Limit features to those with % coverage
   sub_x <- list()
-  for(i in names(x)) {
+  for (i in names(x)) {
     sub_x[[i]] <- x[[i]][x[[i]][, 7] %in% obj_sub, ]
   }
 
